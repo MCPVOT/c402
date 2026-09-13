@@ -1,0 +1,29 @@
+{
+  "name": "c402-protocol",
+  "version": "2.1.0",
+  "description": "c402 - Colombian HTTP 402 fiat payment standard for AI agents and pay-per-call APIs (Wompi/PSE/Nequi rails)",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": "./dist/src/index.js",
+    "./providers/wompi": "./dist/src/providers/wompi.js",
+    "./stores/upstash-rest": "./dist/src/stores/upstash-rest.js",
+    "./stores/memory": "./dist/src/stores/memory.js"
+  },
+  "files": ["dist", "SPEC.md", "CONFORMANCE.md", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": ["http-402", "x402", "payments", "colombia", "wompi", "pse", "nequi", "ai-agents", "protocol"],
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "engines": { "node": ">=20" }
+}

@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-00ff88?style=flat-square&labelColor=0d1117)](./LICENSE)
 [![Production](https://img.shields.io/badge/production--proven-xpequi.xyz-00ff88?style=flat-square&labelColor=0d1117)](https://xpequi.xyz)
 
-**Read next:** [Specification](./SPEC.md) (normative) · [Conformance](./CONFORMANCE.md) (certify your own stack) · [Audit](./docs/AUDIT-2.2.md) (what was broken, with proof) · [Changelog](./CHANGELOG.md)
+**Read next:** [Specification](./SPEC.md) (normative) · [Conformance](./CONFORMANCE.md) (certify your own stack) · [Audit](./docs/AUDIT-2.2.md) (what was broken, with proof) · [Security](./SECURITY.md) (reporting, scope) · [Changelog](./CHANGELOG.md)
 
 ---
 
@@ -43,7 +43,7 @@ Client                          Server (API)                    Wompi
 |---|---|
 | Works today | challenge lifecycle, settlement with atomic claim, prepaid ledger, fail-closed gateway, Wompi provider, discovery, status, signed receipts |
 | Reference implementation | TypeScript core (`src/`), Next.js adapters, Rust receipt verifier |
-| Tested | 101 TypeScript tests, 17 Rust tests, CI on Linux / macOS / Windows |
+| Tested | 101 TypeScript tests, 17 Rust tests, CI on Linux / macOS / Windows (counts from the merge commit; CI runs the same commands) |
 | Not yet | Nequi-direct and Bancolombia-transfer providers (P6), x402 interop (P7), a hosted status service |
 
 The 2.2 release fixed four defects that lost money or locked users out. They are documented with the probe output that proved them, not as a claim that everything is fine: [docs/AUDIT-2.2.md](./docs/AUDIT-2.2.md).
@@ -242,6 +242,7 @@ The canonical receipt form is LF-only, so readers normalise CRLF and a BOM befor
 | `tests/defects.test.ts` | the six regressions that make 2.2 meaningful |
 | `docs/AUDIT-2.2.md` | findings, probe output, severity, clean results |
 | `SPEC.md` · `CONFORMANCE.md` · `CHANGELOG.md` | normative spec, checklist, history |
+| `SECURITY.md` · `CONTRIBUTING.md` | private disclosure and scope; the contribution loop |
 
 ## Version 2.2: what was broken
 
@@ -265,7 +266,7 @@ Every fix has a regression test, and [docs/AUDIT-2.2.md](./docs/AUDIT-2.2.md) re
 
 ## Contributing
 
-Read [CONFORMANCE.md](./CONFORMANCE.md) first: it is the checklist every change is judged against. Then:
+Read [CONFORMANCE.md](./CONFORMANCE.md) first: it is the checklist every change is judged against. The full loop is in [CONTRIBUTING.md](./CONTRIBUTING.md); security reports go through [SECURITY.md](./SECURITY.md), never a public issue. Then:
 
 ```bash
 npm install

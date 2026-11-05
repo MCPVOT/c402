@@ -148,3 +148,64 @@ export function verifyReceipt(
   if (expected.length !== given.length || expected.length === 0) return { ok: false, reason: 'malformed' }
   return timingSafeEqual(expected, given) ? { ok: true } : { ok: false, reason: 'bad_signature' }
 }
+
+/**
+ * Normalise receipt text read from a file, a header or a log line.
+ *
+ * The canonical form is LF-only. Windows editors, PowerShell redirection and
+ * git checkouts with `core.autocrlf=true` all produce CRLF, and a UTF-8 BOM is
+ * common on Windows too. Without this, a perfectly valid receipt fails
+ * verification for a reason that has nothing to do with the signature.
+ */
+export function normalizeReceiptText(text: string): string {
+  return text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').replace(/\n+$/, '')
+}
+
+export interface ParsedReceiptText {
+  payload: ReceiptPayload
+  sig: string
+}
+
+/**
+ * Parse the text form: the canonical lines, then a final `sig=<hex>` line.
+ * Returns null when the shape is wrong; signature validity is a separate step.
+ */
+export function parseReceiptText(text: string): ParsedReceiptText | null {
+  const lines = normalizeReceiptText(text).split('\n')
+  if (lines.length < 2) return null
+
+  const sigLine = lines.pop()!
+  if (!sigLine.startsWith('sig=')) return null
+  const sig = sigLine.slice('sig='.length).trim()
+  if (lines[0] !== RECEIPT_VERSION) return null
+
+  const fields = new Map<string, string>()
+  for (const line of lines.slice(1)) {
+    const eq = line.indexOf('=')
+    if (eq <= 0) return null
+    fields.set(line.slice(0, eq), line.slice(eq + 1))
+  }
+
+  const payload: ReceiptPayload = {
+    nonce: fields.get('nonce') ?? '',
+    keyHash: fields.get('keyHash') ?? '',
+    amountCents: Number(fields.get('amountCents')),
+    currency: fields.get('currency') ?? '',
+    calls: Number(fields.get('calls')),
+    transactionId: fields.get('transactionId') ?? '',
+    paidAt: fields.get('paidAt') ?? '',
+    expiresAt: fields.get('expiresAt') ?? '',
+  }
+  return { payload, sig }
+}
+
+/** Verify a receipt in its text form, tolerating CRLF and a UTF-8 BOM. */
+export function verifyReceiptText(
+  text: string,
+  secret: string,
+  opts: { now?: number } = {},
+): ReceiptVerification {
+  const parsed = parseReceiptText(text)
+  if (!parsed) return { ok: false, reason: 'malformed' }
+  return verifyReceipt({ v: RECEIPT_VERSION, ...parsed.payload, sig: parsed.sig }, secret, opts)
+}

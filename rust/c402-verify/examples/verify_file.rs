@@ -1,8 +1,8 @@
 //! Verify a receipt produced by the TypeScript issuer, from a plain text file.
 //!
 //! File format: the canonical signing input (see the crate docs), then one line
-//! `sig=<64 hex chars>`. This is what `c402-receipt.txt` looks like when an
-//! issuer hands a receipt to an agent that has no HTTP client.
+//! `sig=<64 hex chars>`. CRLF and a UTF-8 BOM are accepted, so a receipt written
+//! on Windows verifies here unchanged.
 //!
 //! Usage:
 //!   cargo run --example verify_file -- receipt.txt <secret>
@@ -38,22 +38,7 @@ fn main() -> ExitCode {
         }
     };
 
-    let trimmed = body.trim_end_matches('\n');
-    let (input, sig) = match trimmed.rsplit_once('\n') {
-        Some((input, last)) => match last.strip_prefix("sig=") {
-            Some(sig) => (input, sig),
-            None => {
-                eprintln!("last line must be sig=<hex>");
-                return ExitCode::from(2);
-            }
-        },
-        None => {
-            eprintln!("receipt file is too short");
-            return ExitCode::from(2);
-        }
-    };
-
-    match c402_verify::verify_canonical(input, sig, secret.as_bytes()) {
+    match c402_verify::verify_receipt_text(&body, secret.as_bytes()) {
         Ok(()) => {
             println!("VALID");
             ExitCode::SUCCESS

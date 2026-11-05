@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest'
 import {
   RECEIPT_VERSION,
   hashApiKey,
+  normalizeReceiptText,
+  parseReceiptText,
   receiptSigningInput,
   signReceipt,
   signReceiptPayload,
   verifyReceipt,
+  verifyReceiptText,
   type Receipt,
   type ReceiptPayload,
 } from '../src/receipt.js'
@@ -144,5 +147,49 @@ describe('signReceipt / verifyReceipt', () => {
     const r = signReceipt(challenge(), event, SECRET, { paidAt: VECTOR.paidAt })
     const now = Date.parse(VECTOR.paidAt) - 10_000
     expect(verifyReceipt(r, SECRET, { now })).toEqual({ ok: true })
+  })
+})
+
+describe('cross-platform receipt text (Windows and Linux)', () => {
+  const canonical = receiptSigningInput(VECTOR)
+  const text = (eol: string) => canonical.split('\n').join(eol) + eol + `sig=${VECTOR_SIG}` + eol
+
+  it('verifies an LF receipt', () => {
+    expect(verifyReceiptText(text('\n'), SECRET)).toEqual({ ok: true })
+  })
+
+  it('verifies a CRLF receipt written on Windows', () => {
+    expect(verifyReceiptText(text('\r\n'), SECRET)).toEqual({ ok: true })
+  })
+
+  it('verifies a receipt with a UTF-8 BOM', () => {
+    expect(verifyReceiptText('\uFEFF' + text('\r\n'), SECRET)).toEqual({ ok: true })
+  })
+
+  it('verifies a receipt with no trailing newline', () => {
+    expect(verifyReceiptText(text('\n').trimEnd(), SECRET)).toEqual({ ok: true })
+  })
+
+  it('still rejects a tampered CRLF receipt', () => {
+    const tampered = text('\r\n').replace('amountCents=250000', 'amountCents=1')
+    expect(verifyReceiptText(tampered, SECRET)).toEqual({ ok: false, reason: 'bad_signature' })
+  })
+
+  it('parses the text form into the same payload', () => {
+    const parsed = parseReceiptText(text('\r\n'))
+    expect(parsed?.payload).toEqual(VECTOR)
+    expect(parsed?.sig).toBe(VECTOR_SIG)
+  })
+
+  it('rejects text with no sig line or the wrong version', () => {
+    expect(verifyReceiptText(canonical, SECRET)).toEqual({ ok: false, reason: 'malformed' })
+    expect(verifyReceiptText(text('\n').replace(RECEIPT_VERSION, 'c402-receipt-v9'), SECRET)).toEqual({
+      ok: false,
+      reason: 'malformed',
+    })
+  })
+
+  it('normalises CRLF and BOM without touching field values', () => {
+    expect(normalizeReceiptText('\uFEFFa\r\nb\rc\n\n')).toBe('a\nb\nc')
   })
 })

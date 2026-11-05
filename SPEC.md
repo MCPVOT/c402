@@ -187,7 +187,9 @@ expiresAt=<challenge expiry, RFC 3339>
 
 `sig` = lowercase hex `HMAC-SHA256(secret, canonical)`; no trailing newline. `v` carries the version tag and is not part of the input. Receipts carry `sha256(apiKeyId)`, never the key.
 
-Reference implementations: `src/receipt.ts` (issuer and verifier) and `rust/c402-verify` (offline verifier). Both assert the same test vector, so a receipt signed by one verifies in the other.
+**Rule (2.2): the canonical form is LF-only.** A reader of the text form MUST strip a UTF-8 BOM and normalise CRLF or lone CR to LF before verifying. Windows editors, PowerShell redirection and `core.autocrlf=true` all produce CRLF; a receipt that fails because of a line ending is a portability defect, not a signature failure. The repository enforces LF in `.gitattributes`.
+
+Reference implementations: `src/receipt.ts` (issuer, verifier, and `verifyReceiptText`) and `rust/c402-verify` (offline verifier, `verify_receipt_text`). Both assert the same test vector, including CRLF and BOM variants, so a receipt signed by one verifies in the other on either platform.
 
 ## 6. Reference implementation
 

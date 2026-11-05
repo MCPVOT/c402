@@ -25,6 +25,7 @@ Second security and correctness release. Version 2.1 fixed the defects it knew a
 ### Added
 
 - **Signed receipts (P5).** `src/receipt.ts` signs a settled challenge as HMAC-SHA256 over a line-oriented canonical form; `rust/c402-verify` verifies the same bytes offline. Both suites assert one shared vector, so a receipt signed by TypeScript verifies in Rust.
+- **Cross-platform by construction.** The text form normalises CRLF and a UTF-8 BOM in both languages (`verifyReceiptText` / `verify_receipt_text`), `.gitattributes` pins the repo to LF, and CI runs the TypeScript suite on Linux, macOS and Windows plus the Rust vector on Linux and Windows. Before this, a receipt file written on Windows failed verification for a line-ending reason.
 - **Discovery document.** `src/discovery.ts` builds `/.well-known/c402.json`: unit, rails, TTLs, grace windows, receipt support, status endpoint.
 - **Payment status contract.** `describePaymentStatus()` projects `pending | paid | expired | unknown` for `GET /c402/status/<nonce>`; `paid` survives expiry because the money moved, and `unknown` deliberately does not distinguish a missing nonce from a down store.
 - **Version negotiation.** Challenges carry `version` and the `X-402-Version` header; a client must refuse an unknown major, and 2.0 payloads without a version are still accepted.

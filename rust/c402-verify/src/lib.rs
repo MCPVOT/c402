@@ -130,6 +130,32 @@ pub fn verify_canonical(input: &str, signature_hex: &str, secret: &[u8]) -> Resu
         .map_err(|_| VerifyError::BadSignature)
 }
 
+/// Normalise receipt text read from a file.
+///
+/// The canonical form is LF-only. Windows editors, PowerShell redirection and
+/// git checkouts with `core.autocrlf=true` produce CRLF, and a UTF-8 BOM is
+/// common on Windows. Without this, a valid receipt fails for a reason that has
+/// nothing to do with the signature.
+pub fn normalize_receipt_text(text: &str) -> String {
+    let without_bom = text.strip_prefix('\u{feff}').unwrap_or(text);
+    without_bom
+        .replace("\r\n", "\n")
+        .replace('\r', "\n")
+        .trim_end_matches('\n')
+        .to_string()
+}
+
+/// Verify a receipt in its text form: the canonical lines, then `sig=<hex>`.
+pub fn verify_receipt_text(text: &str, secret: &[u8]) -> Result<(), VerifyError> {
+    let normalized = normalize_receipt_text(text);
+    let (input, sig_line) = normalized.rsplit_once('\n').ok_or(VerifyError::MalformedReceipt)?;
+    let sig = sig_line.strip_prefix("sig=").ok_or(VerifyError::MalformedReceipt)?;
+    if !input.starts_with(RECEIPT_VERSION) {
+        return Err(VerifyError::MalformedReceipt);
+    }
+    verify_canonical(input, sig.trim(), secret)
+}
+
 fn hex_encode(bytes: &[u8]) -> String {
     const TABLE: &[u8; 16] = b"0123456789abcdef";
     let mut out = String::with_capacity(bytes.len() * 2);

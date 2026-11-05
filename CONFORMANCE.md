@@ -58,6 +58,7 @@ Use this checklist to certify an implementation. Items marked **MUST** are enfor
 - [ ] **SHOULD** serve `GET /c402/status/<nonce>` with `pending | paid | expired | unknown`, and not distinguish a missing nonce from a store outage.
 - [ ] **SHOULD** include `version` in the challenge payload and `X-402-Version` in the response.
 - [ ] **SHOULD** issue a `c402-receipt-v1` HMAC receipt on settlement; verify it with `src/receipt.ts` or `rust/c402-verify`.
+- [ ] **MUST** normalise CRLF and a UTF-8 BOM before verifying the receipt text form; the canonical form is LF-only.
 
 ## Running the suite
 

@@ -1,0 +1,14 @@
+# The receipt canonical form is LF-only. Keep every text file LF in the repo so
+# a Windows checkout with core.autocrlf=true cannot change what gets signed.
+* text=auto eol=lf
+
+*.ts   text eol=lf
+*.rs   text eol=lf
+*.md   text eol=lf
+*.json text eol=lf
+*.yml  text eol=lf
+*.toml text eol=lf
+
+*.png  binary
+*.jpg  binary
+*.tgz  binary

@@ -37,11 +37,14 @@ Client                          Server (API)                    Wompi
 
 ## Quick start
 
+Runs on **Linux, macOS and Windows** with Node 20+ (and Rust 1.75+ for the verifier).
+CI runs the TypeScript suite on all three platforms and the Rust vector on Linux and Windows.
+
 ```bash
 npm install
-npm test        # 93 conformance tests
+npm test        # 101 conformance tests
 npm run build
-cd rust/c402-verify && cargo test   # 12 receipt-vector tests
+cd rust/c402-verify && cargo test   # 17 receipt-vector tests
 ```
 
 Then wire it up:

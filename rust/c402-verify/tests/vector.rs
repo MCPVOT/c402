@@ -1,7 +1,10 @@
 //! Cross-language vector. The same bytes are asserted in `tests/receipt.test.ts`.
 //! A change to the canonical form on either side fails both suites.
 
-use c402_verify::{hash_api_key, signing_input, sign, verify, ReceiptPayload, VerifyError};
+use c402_verify::{
+    hash_api_key, normalize_receipt_text, sign, signing_input, verify, verify_receipt_text,
+    ReceiptPayload, VerifyError,
+};
 
 const SECRET: &[u8] = b"test-secret-0123456789";
 const EXPECTED_SIG: &str = "35c7221a55287b72eef382b4b439f24af400c5e5c531c4c4a925032627e44d14";
@@ -96,4 +99,43 @@ fn currency_is_case_insensitive_in_the_signing_input() {
 fn hashes_api_keys_like_typescript() {
     assert_eq!(hash_api_key("key-1"), vector().key_hash);
     assert_ne!(hash_api_key("key-2"), vector().key_hash);
+}
+
+// Cross-platform: a receipt written on Windows must verify unchanged.
+
+fn text_with(eol: &str) -> String {
+    format!(
+        "{}{}sig={}{}",
+        signing_input(&vector()).replace('\n', eol),
+        eol,
+        EXPECTED_SIG,
+        eol
+    )
+}
+
+#[test]
+fn verifies_lf_receipt_text() {
+    assert_eq!(verify_receipt_text(&text_with("\n"), SECRET), Ok(()));
+}
+
+#[test]
+fn verifies_crlf_receipt_text() {
+    assert_eq!(verify_receipt_text(&text_with("\r\n"), SECRET), Ok(()));
+}
+
+#[test]
+fn verifies_receipt_text_with_a_utf8_bom() {
+    let text = format!("\u{feff}{}", text_with("\r\n"));
+    assert_eq!(verify_receipt_text(&text, SECRET), Ok(()));
+}
+
+#[test]
+fn rejects_tampered_crlf_receipt_text() {
+    let text = text_with("\r\n").replace("amountCents=250000", "amountCents=1");
+    assert_eq!(verify_receipt_text(&text, SECRET), Err(VerifyError::BadSignature));
+}
+
+#[test]
+fn normalises_line_endings_and_bom() {
+    assert_eq!(normalize_receipt_text("\u{feff}a\r\nb\rc\n\n"), "a\nb\nc");
 }

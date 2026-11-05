@@ -48,7 +48,8 @@ describe('wompi checksum', () => {
 
 describe('wompi reference + event parsing', () => {
   it('round-trips a challenge reference', () => {
-    expect(parseNonceFromReference(buildChallengeReference('abc'))).toBe('abc')
+    const nonce = 'b3f1c9e2-9a4d-4f61-8b3a-9f1e0d7c2a55'
+    expect(parseNonceFromReference(buildChallengeReference(nonce))).toBe(nonce)
   })
 
   it('rejects non-c402 references', () => {

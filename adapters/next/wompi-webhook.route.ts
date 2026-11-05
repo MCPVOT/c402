@@ -10,10 +10,15 @@
  */
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { settleAndGrant } from '../../../src/challenge.js'
-import { StoreCreditLedger } from '../../../src/ledger.js'
-import { parseWompiEvent, verifyEventChecksum, WOMPI_CHECKSUM_HEADER } from '../../../src/providers/wompi.js'
-import type { ChallengeStore } from '../../../src/types.js'
+// Package imports: these files are copied into an app that depends on c402-protocol.
+import {
+  settleAndGrant,
+  StoreCreditLedger,
+  parseWompiEvent,
+  verifyEventChecksum,
+  WOMPI_CHECKSUM_HEADER,
+} from 'c402-protocol'
+import type { ChallengeStore } from 'c402-protocol'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -69,10 +74,23 @@ export function createWompiWebhookHandler(deps: WebhookDeps) {
         return NextResponse.json({ error: 'Payment mismatch', reason: result.reason }, { status: 409 })
       case 'invalid_status':
         return NextResponse.json({ received: true, ignored: 'status_not_settleable' })
+      case 'invalid_challenge':
+        // Corrupt stored record: retrying will not repair it.
+        console.error(`[c402] settlement rejected for ${event.reference}: invalid stored challenge`)
+        return NextResponse.json({ received: true, ignored: 'invalid_challenge' })
       case 'expired_beyond_grace':
         console.error(`[c402] settlement rejected for ${event.reference}: expired beyond grace`)
         return NextResponse.json({ error: 'Challenge expired' }, { status: 410 })
       case 'store_unavailable':
+      case 'grant_failed':
+        // The buyer paid and we could not grant. 503 so the provider retries:
+        // a 200 here would silently drop the payment. grant_failed has already
+        // released the claim, so the retry can succeed.
+        console.error(`[c402] settlement deferred for ${event.reference}: ${result.reason}`)
+        return NextResponse.json(
+          { error: 'Settlement deferred', reason: result.reason, recoverable: true },
+          { status: 503, headers: { 'Retry-After': '30', 'Cache-Control': 'no-store' } },
+        )
       case 'unknown_challenge':
       default:
         return NextResponse.json({ received: true, deferred: true })

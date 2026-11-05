@@ -43,7 +43,9 @@ export function verifySettlement(
   }
 
   const expiresAt = Date.parse(challenge.expiresAt)
-  if (Number.isFinite(expiresAt) && now > expiresAt + grace * 1000) {
+  // Fail closed: an unparseable TTL must never be read as "still valid".
+  if (!Number.isFinite(expiresAt)) return { ok: false, reason: 'invalid_challenge' }
+  if (now > expiresAt + grace * 1000) {
     return { ok: false, reason: 'expired_beyond_grace' }
   }
 

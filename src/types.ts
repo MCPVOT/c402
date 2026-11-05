@@ -16,6 +16,12 @@ export interface C402Config {
   currency: string
   /** Late-arriving webhooks may settle this long after expiry. Default 86400 (24h). */
   settlementGraceSeconds: number
+  /**
+   * How long a client may still redeem a settled challenge after it expires.
+   * MUST be >= settlementGraceSeconds, otherwise a webhook can grant credits
+   * for a challenge the retry path already refuses to honour. Default 86400.
+   */
+  redemptionGraceSeconds: number
   /** Max simultaneous unpaid challenges per API key (anti-flood). Default 20. */
   maxOutstandingPerKey: number
   /**
@@ -30,6 +36,7 @@ export const DEFAULT_CONFIG: C402Config = {
   auditTtlSeconds: 86400 * 30,
   currency: 'COP',
   settlementGraceSeconds: 86400,
+  redemptionGraceSeconds: 86400,
   maxOutstandingPerKey: 20,
   failClosed: true,
 }
@@ -73,6 +80,12 @@ export interface ChallengeStore {
    */
   claimOnce(nonce: string, ttlSeconds: number): Promise<boolean>
   /**
+   * Release a claim that was taken but could not be turned into a grant.
+   * c402 requires this: money already moved at the provider, so a burned claim
+   * would lose the payment permanently. Must be idempotent.
+   */
+  releaseClaim(nonce: string): Promise<void>
+  /**
    * Best-effort read-modify-write for non-authoritative fields (paid flag,
    * settled transaction id). Never use this to decide whether to grant credits:
    * claimOnce() is the sole authority for settlement.
@@ -106,5 +119,7 @@ export type SettleReason =
   | 'amount_mismatch'
   | 'currency_mismatch'
   | 'invalid_status'
+  | 'invalid_challenge'
   | 'expired_beyond_grace'
   | 'claim_lost'
+  | 'grant_failed'

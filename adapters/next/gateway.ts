@@ -8,19 +8,30 @@
  */
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { calculatePrice, MIN_CALLS_FOR_CHALLENGE } from '../../src/pricing.js'
-import { createChallenge } from '../../src/challenge.js'
-import { StoreCreditLedger } from '../../src/ledger.js'
-import { decideAccess } from '../../src/gateway-decision.js'
-import { build402Body, buildChallengePayload, C402_HEADERS, encodeChallengeHeader } from '../../src/http.js'
-import { buildChallengeReference, buildCheckoutUrl } from '../../src/providers/wompi.js'
-import type { ChallengeStore } from '../../src/types.js'
+// Import from the published package. A relative ../../src path only resolves
+// inside the c402 repository, which made these files uncopyable before.
+import {
+  calculatePrice,
+  MIN_CALLS_FOR_CHALLENGE,
+  createChallenge,
+  StoreCreditLedger,
+  decideAccess,
+  build402Body,
+  buildChallengePayload,
+  C402_HEADERS,
+  encodeChallengeHeader,
+  buildChallengeReference,
+  buildCheckoutUrl,
+} from 'c402-protocol'
+import type { ChallengeStore } from 'c402-protocol'
 
 export interface C402GatewayDeps {
   store: ChallengeStore
   redirectUrl: string
   wompiPublicKey: string
   failClosed?: boolean
+  /** Optional status endpoint template, e.g. "/c402/status/{nonce}". */
+  statusUrl?: string
 }
 
 export type C402Outcome =
@@ -92,7 +103,9 @@ export async function checkC402(
     redirectUrl: deps.redirectUrl,
   })
 
-  const payload = buildChallengePayload(challenge, paymentUrl)
+  const payload = buildChallengePayload(challenge, paymentUrl, {
+    statusUrl: deps.statusUrl ? deps.statusUrl.replace('{nonce}', challenge.nonce) : undefined,
+  })
 
   return {
     kind: 'response',

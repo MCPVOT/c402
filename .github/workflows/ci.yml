@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  verify:
+  typescript:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,3 +22,16 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+
+  rust:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust/c402-verify
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cross-language receipt vector
+        run: cargo test
+      - name: Clippy
+        run: cargo clippy -- -D warnings

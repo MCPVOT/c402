@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MIN_CALLS_FOR_CHALLENGE, PRICE_TIERS, calculatePrice } from '../src/pricing.js'
+import { MIN_CALLS_FOR_CHALLENGE, PRICE_TIERS, assertPriceLadder, calculatePrice } from '../src/pricing.js'
 
 describe('price ladder', () => {
   it('returns the smallest covering tier', () => {
@@ -27,5 +27,20 @@ describe('price ladder', () => {
 
   it('satisfies the minimum challenge size', () => {
     expect(calculatePrice(MIN_CALLS_FOR_CHALLENGE).calls).toBe(50)
+  })
+
+  it('selects by minCalls so the ladder is the single source of truth', () => {
+    assertPriceLadder()
+    // each tier boundary is decided by minCalls, not by the calls column
+    for (const tier of PRICE_TIERS) {
+      expect(calculatePrice(tier.minCalls).calls).toBe(tier.calls)
+    }
+  })
+
+  it('rejects a ladder with a gap or a shrinking tier', () => {
+    expect(() => assertPriceLadder([{ minCalls: 1, priceCop: 25, calls: 50 }, { minCalls: 60, priceCop: 80, calls: 200 }])).toThrow(/gap/)
+    expect(() => assertPriceLadder([{ minCalls: 1, priceCop: 0, calls: 50 }])).toThrow(/priceCop/)
+    expect(() => assertPriceLadder([{ minCalls: 1, priceCop: 25, calls: 0 }])).toThrow(/calls/)
+    expect(() => assertPriceLadder([])).toThrow(/empty/)
   })
 })

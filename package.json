@@ -1,23 +1,53 @@
 {
   "name": "c402-protocol",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "c402 - Colombian HTTP 402 fiat payment standard for AI agents and pay-per-call APIs (Wompi/PSE/Nequi rails)",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/src/index.js",
-    "./providers/wompi": "./dist/src/providers/wompi.js",
-    "./stores/upstash-rest": "./dist/src/stores/upstash-rest.js",
-    "./stores/memory": "./dist/src/stores/memory.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./pricing": {
+      "types": "./dist/pricing.d.ts",
+      "default": "./dist/pricing.js"
+    },
+    "./receipt": {
+      "types": "./dist/receipt.d.ts",
+      "default": "./dist/receipt.js"
+    },
+    "./discovery": {
+      "types": "./dist/discovery.d.ts",
+      "default": "./dist/discovery.js"
+    },
+    "./providers/wompi": {
+      "types": "./dist/providers/wompi.d.ts",
+      "default": "./dist/providers/wompi.js"
+    },
+    "./stores/upstash-rest": {
+      "types": "./dist/stores/upstash-rest.d.ts",
+      "default": "./dist/stores/upstash-rest.js"
+    },
+    "./stores/memory": {
+      "types": "./dist/stores/memory.d.ts",
+      "default": "./dist/stores/memory.js"
+    }
   },
-  "files": ["dist", "SPEC.md", "CONFORMANCE.md", "README.md"],
+  "files": ["dist", "SPEC.md", "CONFORMANCE.md", "README.md", "CHANGELOG.md"],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MCPVOT/c402.git"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.test.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "keywords": ["http-402", "x402", "payments", "colombia", "wompi", "pse", "nequi", "ai-agents", "protocol"],
   "devDependencies": {

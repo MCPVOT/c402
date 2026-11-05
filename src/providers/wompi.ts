@@ -40,15 +40,32 @@ export function buildChallengeReference(nonce: string): string {
   return `c402_${nonce}`
 }
 
+/**
+ * Nonces travel through provider references and become store keys, so the
+ * charset is restricted. Anything else (slashes, dots, whitespace, control
+ * characters) is rejected rather than sanitised: a rejected nonce is an
+ * unknown challenge, while a sanitised one could collide with another key.
+ */
+export const NONCE_PATTERN = /^[A-Za-z0-9_-]{8,128}$/
+
 /** Extract the nonce from any provider reference, or null when it is not a c402 challenge. */
 export function parseNonceFromReference(reference: string | null | undefined): string | null {
   if (!reference || !reference.startsWith('c402_')) return null
   const nonce = reference.slice('c402_'.length)
-  return nonce.length > 0 ? nonce : null
+  return NONCE_PATTERN.test(nonce) ? nonce : null
 }
+
+/** Settleable statuses as a set, for provider-agnostic callers. */
+export const SETTLEABLE_STATUSES = ['APPROVED', 'COMPLETED'] as const
 
 export function isApprovedStatus(status: string | null | undefined): boolean {
   return status === 'APPROVED' || status === 'COMPLETED'
+}
+
+/** True when the provider event is the transaction update c402 expects. */
+export function isTransactionEvent(payload: WompiEventPayload): boolean {
+  const type = payload?.event?.type
+  return type === undefined || type === 'transaction.updated'
 }
 
 /** Normalise a Wompi webhook payload into a c402 SettlementEvent. */

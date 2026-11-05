@@ -31,7 +31,7 @@ Client                          Server (API)                    Wompi
   |                              |  atomic claim (SET NX)       |
   |  retry + X-402-Payment-Id    |  grant credits               |
   | ---------------------------> |                              |
-  |  200 + data                  |                              |
+  |  200 + data (+ receipt)      |                              |
   | <--------------------------  |                              |
 ```
 
@@ -39,8 +39,9 @@ Client                          Server (API)                    Wompi
 
 ```bash
 npm install
-npm test        # 54 conformance tests
+npm test        # 93 conformance tests
 npm run build
+cd rust/c402-verify && cargo test   # 12 receipt-vector tests
 ```
 
 Then wire it up:
@@ -51,10 +52,14 @@ Then wire it up:
 
 ```ts
 import { UpstashRestStore } from 'c402-protocol/stores/upstash-rest'
-import { settleAndGrant, StoreCreditLedger } from 'c402-protocol'
+import { settleAndGrant, StoreCreditLedger, signReceipt } from 'c402-protocol'
 
 const store = new UpstashRestStore({ url: env.UPSTASH_URL, token: env.UPSTASH_TOKEN })
 const result = await settleAndGrant({ store, ledger: new StoreCreditLedger(store), event })
+if (result.ok) {
+  const receipt = signReceipt(result.challenge, event, env.C402_RECEIPT_SECRET)
+  // hand the receipt to the client; anyone with the secret can verify it offline
+}
 ```
 
 ## Non-negotiables (from the spec)
@@ -68,16 +73,33 @@ const result = await settleAndGrant({ store, ledger: new StoreCreditLedger(store
 | Idempotency keyed on `transaction.id`, never `event.id` |
 | Challenges are bound to an API key, UUID v4 nonce, TTL of 30 minutes or less |
 | **Fail closed** (503 + Retry-After) when the challenge store is unreachable |
+| A store outage is **not** an unknown challenge; a failed grant **releases** the claim |
+| The retry window is **at least** as long as the settlement grace |
+
+## Agent-friendly surface (2.2)
+
+An unattended client needs more than a 402 body. c402 2.2 answers:
+
+| Question | Where |
+|---|---|
+| What unit is the price in? | `amountCents`, integer centavos (SPEC 2) |
+| What can I pay with? | `rails` in `/.well-known/c402.json` |
+| How do I know a payment landed? | `GET /c402/status/<nonce>` -> `pending / paid / expired / unknown` |
+| Can I prove the grant elsewhere? | signed receipt, verified offline by `c402-protocol/receipt` or the Rust crate |
+| Which protocol version is this? | `version` in the payload and `X-402-Version` header |
+| How long can I still redeem after expiry? | `redemptionGraceSeconds` (default 24 h) |
 
 ## What is in this repository
 
 | Path | Contents |
 |---|---|
-| `src/` | Framework-agnostic core: challenge lifecycle, settlement verification, ledger, pricing, HTTP headers, Wompi provider, stores |
+| `src/` | Framework-agnostic core: challenge lifecycle, settlement verification, ledger, pricing, headers, discovery, receipts, Wompi provider, stores |
 | `tests/` | Conformance suite, including a non-atomic store the suite is required to reject |
+| `rust/c402-verify/` | Offline receipt verifier in Rust; shares a byte-identical test vector with TypeScript |
 | `adapters/next/` | Copy-paste wiring for Next.js App Router (not part of the published package) |
-| `SPEC.md` | Normative protocol specification, v2.1 |
+| `SPEC.md` | Normative protocol specification, v2.2 |
 | `CONFORMANCE.md` | Implementer checklist for certifying your own stack |
+| `docs/AUDIT-2.2.md` | The audit that produced 2.2: findings, proof, severity |
 | `CHANGELOG.md` | Protocol and implementation history |
 
 ## Why c402 exists
@@ -86,19 +108,22 @@ Colombia has world-class instant payment rails and no agent-native monetization 
 
 **Live deployment:** [Pequi API](https://xpequi.xyz) - Colombia's first public real-estate data API (31 endpoints, 276 barrios), monetized end to end with c402.
 
-## Version 2.1: three defects fixed
+## Version 2.2: four more defects fixed
 
-Version 2.0 shipped a reference implementation whose claims did not match its code. Version 2.1 fixes all three and adds a regression test for each:
+Version 2.1 fixed three defects and declared the implementation audited. Re-auditing it found four more, three of which lose money:
 
-1. **The atomic claim was not atomic.** It documented `SET NX` but issued a plain `SET`, which always succeeds, so concurrent webhook deliveries could both grant credits. The store now sends a real `SET ... NX` and the suite asserts `NX=true` reaches the wire.
-2. **The amount field contradicted its unit.** It was named `amount`, documented as COP, and compared against centavos. Now `amountCents`, integer minor units, with conversion helpers and a normative section.
-3. **The gateway failed open.** It skipped payment when the store was down, serving paid resources for free. It now returns 503 while fail-closed is set.
+1. **A store outage looked like an unknown challenge**, so a valid payment was acknowledged and dropped instead of retried.
+2. **A failed credit grant burned the settlement claim**, so the buyer paid and no retry could ever grant.
+3. **The retry window was shorter than the settlement grace**, so late but valid payments granted credits the client could not spend.
+4. **Expired challenges never stopped counting**, so twenty abandoned challenges locked a paying caller out.
 
-Full detail in [CHANGELOG.md](./CHANGELOG.md).
+Plus: malformed timestamps failed open, nonce parsing accepted path-like values, the price ladder's `minCalls` was decorative, and the adapters could not be copied out of the repo. Each fix carries a regression test, and [docs/AUDIT-2.2.md](./docs/AUDIT-2.2.md) records the probe output that proved it.
+
+Version 2.1 fixed: the non-atomic claim (double grant), the amount/unit contradiction (100x), and the gateway that failed open. Full detail in [CHANGELOG.md](./CHANGELOG.md).
 
 ## Roadmap
 
-- **P5** - signed payment receipts (HMAC) for offline grant verification
+- ~~**P5** - signed payment receipts (HMAC) for offline grant verification~~ (shipped 2.2)
 - **P6** - multi-provider abstraction (Nequi direct, Bancolombia Transfer)
 - **P7** - x402 interop bridge: one challenge, payable in COP *or* USDC
 

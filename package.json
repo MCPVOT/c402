@@ -47,6 +47,7 @@
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "demo": "npm run build && node examples/demo.mjs",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "keywords": ["http-402", "x402", "payments", "colombia", "wompi", "pse", "nequi", "ai-agents", "protocol"],

@@ -96,6 +96,7 @@ describe('conformance suite catches a non-atomic store', () => {
     async getNumber(): Promise<number | null> { return null }
     async setJson(): Promise<void> {}
     async getJson<T>(): Promise<T | null> { return null }
+    async releaseClaim(): Promise<void> {}
     async claimOnce(nonce: string): Promise<boolean> {
       const already = this.seen.get(nonce) ?? false
       await Promise.resolve() // race window

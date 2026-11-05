@@ -29,6 +29,18 @@ describe('X-402-Challenge header', () => {
     expect(parseChallengeHeader('{"nonce":"n","amountCents":"2500","currency":"COP"}')).toBeNull()
   })
 
+  it('carries the protocol version and refuses another major version', () => {
+    const payload = buildChallengePayload(challenge, 'https://x')
+    expect(payload.version).toBe('2.2')
+    const foreign = encodeChallengeHeader({ ...payload, version: '3.0' })
+    expect(parseChallengeHeader(foreign)).toBeNull()
+  })
+
+  it('accepts a 2.0 payload without a version field', () => {
+    const legacy = JSON.stringify({ nonce: 'n-1', amountCents: 2500, currency: 'COP', calls: 50, expiresAt: 'x', paymentUrl: 'https://x' })
+    expect(parseChallengeHeader(legacy)).not.toBeNull()
+  })
+
   it('builds a 402 body', () => {
     const payload = buildChallengePayload(challenge, 'https://x')
     const body = build402Body(payload)

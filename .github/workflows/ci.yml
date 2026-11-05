@@ -7,8 +7,13 @@ on:
     branches: [main]
 
 jobs:
-  verify:
-    runs-on: ubuntu-latest
+  typescript:
+    name: typescript (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,3 +27,23 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+
+  rust:
+    name: rust (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: rust/c402-verify
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Cross-language receipt vector
+        run: cargo test
+      - name: Clippy
+        run: cargo clippy -- -D warnings

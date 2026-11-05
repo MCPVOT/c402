@@ -78,6 +78,11 @@ export class UpstashRestStore implements ChallengeStore {
     return res === 'OK'
   }
 
+  /** Idempotent (DEL of a missing key returns 0, not an error). */
+  async releaseClaim(nonce: string): Promise<void> {
+    await this.call(`del/${encodeURIComponent(`c402:paid:${nonce}`)}`)
+  }
+
   async incr(key: string, by: number, ttlSeconds: number): Promise<number | null> {
     const k = encodeURIComponent(key)
     const res = await this.call(`incrby/${k}/${by}`)

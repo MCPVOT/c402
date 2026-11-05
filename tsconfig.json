@@ -11,12 +11,12 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "dist",
-    "rootDir": ".",
+    "rootDir": "src",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
-  "exclude": ["adapters/**", "dist/**", "node_modules/**"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "node_modules", "adapters", "tests", "rust"]
 }

@@ -49,6 +49,11 @@ export class MemoryStore implements ChallengeStore {
     return true
   }
 
+  /** Idempotent: removing a claim that is not there is not an error. */
+  async releaseClaim(nonce: string): Promise<void> {
+    this.map.delete(`c402:paid:${nonce}`)
+  }
+
   async incr(key: string, by: number, ttlSeconds: number): Promise<number | null> {
     const current = this.read<number>(key) ?? 0
     const next = current + by

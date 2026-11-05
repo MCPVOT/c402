@@ -1,0 +1,14 @@
+[package]
+name = "c402-verify"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Offline verification of c402 payment receipts (HMAC-SHA256)"
+license = "MIT"
+repository = "https://github.com/MCPVOT/c402"
+keywords = ["c402", "http-402", "payments", "receipt", "hmac"]
+categories = ["authentication", "web-programming"]
+
+[dependencies]
+hmac = "0.12"
+sha2 = "0.10"

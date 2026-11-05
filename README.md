@@ -241,6 +241,7 @@ The canonical receipt form is LF-only, so readers normalise CRLF and a BOM befor
 | `adapters/next/` | copy-paste App Router wiring |
 | `tests/defects.test.ts` | the six regressions that make 2.2 meaningful |
 | `docs/AUDIT-2.2.md` | findings, probe output, severity, clean results |
+| `docs/RELEASING.md` | publishing with OIDC Trusted Publishing; the tokenless path |
 | `SPEC.md` · `CONFORMANCE.md` · `CHANGELOG.md` | normative spec, checklist, history |
 | `SECURITY.md` · `CONTRIBUTING.md` | private disclosure and scope; the contribution loop |
 

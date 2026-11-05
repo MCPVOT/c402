@@ -1,12 +1,21 @@
 name: release
 
-# Publishes the package when a GitHub release is published, or on demand for an
-# existing tag. Needs one repository secret: NPM_TOKEN (an npm automation token
-# with publish rights for c402-protocol).
+# Publishes c402-protocol on npm.
 #
-# A release is a decision, so this does not run on every push. It refuses a tag
-# that does not match package.json, so a mis-tagged release fails loudly instead
-# of shipping the wrong version.
+# No token is stored. Authentication is npm Trusted Publishing over OIDC: the
+# job mints a short-lived, workflow-specific token that cannot be extracted or
+# reused. That is strictly better than a long-lived NPM_TOKEN secret, which is
+# readable by anyone who can run a workflow on this repository.
+#
+# One-time setup (see docs/RELEASING.md):
+#   1. the package must exist on npmjs.com (first publish is done by a human);
+#   2. npmjs.com -> c402-protocol -> Settings -> Trusted Publisher:
+#      GitHub Actions, user MCPVOT, repository c402, workflow release.yml;
+#   3. optionally create a GitHub environment `npm-publish` with required
+#      reviewers, then uncomment the `environment:` line below.
+#
+# Requires npm >= 11.5.1 for OIDC, hence Node 24 (the guard below fails loudly
+# rather than silently falling back to token auth).
 
 on:
   release:
@@ -20,11 +29,16 @@ on:
 
 permissions:
   contents: read
-  id-token: write # npm provenance
+  id-token: write # OIDC for Trusted Publishing + provenance
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # environment: npm-publish   # enable after creating it with required reviewers
     steps:
       # A release event checks out its tag. A manual dispatch checks out main;
       # the tag input is only compared, never used as a ref, so it cannot point
@@ -36,9 +50,20 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
-          registry-url: 'https://registry.npmjs.org'
+
+      - name: Require npm that supports Trusted Publishing
+        run: |
+          V=$(npm --version)
+          echo "npm $V"
+          MAJ=${V%%.*}
+          REST=${V#*.}
+          MIN=${REST%%.*}
+          if [ "$MAJ" -lt 11 ] || { [ "$MAJ" -eq 11 ] && [ "$MIN" -lt 5 ]; }; then
+            echo "::error::npm $V is older than 11.5.1; Trusted Publishing would not work"
+            exit 1
+          fi
 
       - name: Check the tag matches package.json
         env:
@@ -66,7 +91,5 @@ jobs:
         working-directory: rust/c402-verify
         run: cargo test
 
-      - name: Publish
+      - name: Publish with OIDC (no token)
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
